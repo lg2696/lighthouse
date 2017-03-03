@@ -23,6 +23,10 @@ import {updateNotifier} from './shim-modules';
 // Tell user if there's a newer version of LH.
 updateNotifier({pkg}).notify();
 
+interface LighthouseError extends Error {
+  code?: string
+};
+
 const cliFlags = getFlags();
 
 // Process terminating command
