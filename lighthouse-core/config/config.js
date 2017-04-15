@@ -583,6 +583,10 @@ class Config {
     });
   }
 
+  removePasses() {
+    this._passes = undefined;
+  }
+
   /** @type {string} */
   get configDir() {
     return this._configDir;
@@ -596,11 +600,6 @@ class Config {
   /** @type {Array<!Audit>} */
   get audits() {
     return this._audits;
-  }
-
-  /** @type {Array<!AuditResult>} */
-  get auditResults() {
-    return this._auditResults;
   }
 
   /** @type {Array<!Artifacts>} */
