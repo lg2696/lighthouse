@@ -52,7 +52,11 @@ export function getFlags(manualArgv?: string) {
 
       .group(
           [
-            'save-assets', 'save-artifacts', 'list-all-audits', 'list-trace-categories',
+            'save-assets', 'save-artifacts',
+                'only-gather',
+    'only-audit',
+    'only-report',
+            'list-all-audits', 'list-trace-categories',
             'additional-trace-categories', 'config-path', 'chrome-flags', 'perf', 'port',
             'hostname', 'max-wait-for-load'
           ],
@@ -64,6 +68,9 @@ export function getFlags(manualArgv?: string) {
         'disable-device-emulation': 'Disable Nexus 5X emulation',
         'disable-cpu-throttling': 'Disable CPU throttling',
         'disable-network-throttling': 'Disable network throttling',
+         'only-gather': 'Collect artifacts from a connected browser, save, & quit',
+    'only-audit': 'Process saved artifacts from disk',
+    'only-report': 'Generate report from saved audit results',
         'save-assets': 'Save the trace contents & screenshots to disk',
         'save-artifacts': 'Save all gathered artifacts to disk',
         'list-all-audits': 'Prints a list of all available audits and exits',
@@ -83,6 +90,12 @@ export function getFlags(manualArgv?: string) {
         'max-wait-for-load':
             'The timeout (in milliseconds) to wait before the page is considered done loading and the run should continue. WARNING: Very high values can lead to large traces and instability',
       })
+        // set aliases
+  .alias({
+    'only-gather': 'G',
+    'only-audit': 'A',
+    'only-report': 'R'
+  })
 
       .group(['output', 'output-path', 'view'], 'Output:')
       .describe({
