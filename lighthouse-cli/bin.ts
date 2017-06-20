@@ -25,7 +25,8 @@ updateNotifier({pkg}).notify();
 
 interface LighthouseError extends Error {
   code?: string
-};
+}
+;
 
 const cliFlags = getFlags();
 
