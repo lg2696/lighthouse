@@ -19,7 +19,7 @@ const pkg = require('../package.json');
 const Sentry = require('../lighthouse-core/lib/sentry');
 
 // accept noop modules for these, so the real dependency is optional.
-import {updateNotifier} from './shim-modules';
+const updateNotifier = require('update-notifier');
 import {askPermission} from './sentry-prompt';
 
 function isDev() {

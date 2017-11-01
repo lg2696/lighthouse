@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@types/node": "6.0.66",
+    "@types/opn": "^3.0.28",
     "lighthouse-logger": "^1.0.0"
   }
 }
