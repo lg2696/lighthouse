@@ -5,6 +5,7 @@
  */
 'use strict';
 
+const marky = require('marky');
 const Driver = require('./gather/driver.js');
 const GatherRunner = require('./gather/gather-runner');
 const ReportGeneratorV2 = require('./report/v2/report-generator');
@@ -23,11 +24,14 @@ class Runner {
 
     const config = opts.config;
 
+    marky.mark('runner.run');
+
     // save the initialUrl provided by the user
     opts.initialUrl = opts.url;
     if (typeof opts.initialUrl !== 'string' || opts.initialUrl.length === 0) {
       return Promise.reject(new Error('You must provide a url to the runner'));
     }
+
 
     let parsedURL;
     try {
@@ -59,6 +63,9 @@ class Runner {
     // ... or that there are artifacts & audits.
     const validArtifactsAndAudits = config.artifacts && config.audits;
 
+    log.events.on('status', ([_, title, id]) => marky.mark(id));
+    log.events.on('statusEnd', ([_, title, id]) => marky.stop(id));
+
     // Make a run, which can be .then()'d with whatever needs to run (based on the config).
     let run = Promise.resolve();
 
@@ -68,6 +75,8 @@ class Runner {
       if (validPassesAndAudits) {
         // Set up the driver and run gatherers.
         opts.driver = opts.driverMock || new Driver(connection);
+        run = run.then(_ => marky.stop('runner.run'));
+
         run = run.then(_ => GatherRunner.run(config.passes, opts));
       } else if (validArtifactsAndAudits) {
         run = run.then(_ => config.artifacts);
@@ -90,9 +99,8 @@ class Runner {
         return artifacts;
       });
 
-
       run = run.then(artifacts => {
-        log.log('status', 'Analyzing and running audits...');
+        log.log('status', 'Analyzing and running audits...', 'runner-auditall');
         return artifacts;
       });
 
@@ -128,7 +136,9 @@ class Runner {
     // Format and generate JSON report before returning.
     run = run
       .then(runResults => {
-        log.log('status', 'Generating results...');
+        log.verbose('statusEnd', 'Analyzing and running audits...', 'runner-auditall');
+        const status = {str: 'Generating results...', id: 'runner-generate'};
+        log.log('status', status.str, status.id);
 
         const resultsById = runResults.auditResults.reduce((results, audit) => {
           results[audit.name] = audit;
@@ -144,6 +154,14 @@ class Runner {
           score = report.score;
         }
 
+        log.verbose('statusEnd', status.str, status.id);
+        const timings = {};
+        marky.getEntries()
+            .filter(e => e.entryType === 'measure')
+            .forEach(e => timings[e.name] = e.duration);
+
+
+
         return {
           userAgent: runResults.artifacts.UserAgent,
           lighthouseVersion: require('../package').version,
@@ -156,6 +174,7 @@ class Runner {
           score,
           reportCategories,
           reportGroups: config.groups,
+          timing: timings,
         };
       })
       .catch(err => {
@@ -176,10 +195,13 @@ class Runner {
    * @private
    */
   static _runAudit(audit, artifacts) {
-    const status = `Evaluating: ${audit.meta.description}`;
+    const status = {
+      str: `Evaluating: ${audit.meta.description}`,
+      id: `audit-${audit.meta.name}`,
+    };
 
     return Promise.resolve().then(_ => {
-      log.log('status', status);
+      log.log('status', status.str, status.id);
 
       // Return an early error if an artifact required for the audit is missing or an error.
       for (const artifactName of audit.meta.requiredArtifacts) {
@@ -228,7 +250,7 @@ class Runner {
       // Non-fatal error become error audit result.
       return Audit.generateErrorAuditResult(audit, 'Audit error: ' + err.message);
     }).then(result => {
-      log.verbose('statusEnd', status);
+      log.verbose('statusEnd', status.str, status.id);
       return result;
     });
   }
