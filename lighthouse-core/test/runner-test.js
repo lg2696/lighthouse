@@ -6,16 +6,66 @@
 'use strict';
 
 const Runner = require('../runner');
+const GatherRunner = require('../gather/gather-runner');
 const driverMock = require('./gather/fake-driver');
 const Config = require('../config/config');
 const Audit = require('../audits/audit');
+const assetSaver = require('../lib/asset-saver');
 const assert = require('assert');
 const path = require('path');
+const sinon = require('sinon');
+
 const computedArtifacts = Runner.instantiateComputedArtifacts();
 
 /* eslint-env mocha */
 
 describe('Runner', () => {
+  describe.only('GAR flags', () => {
+    const saveArtifactsSpy = sinon.spy(assetSaver, 'saveArtifacts');
+    const gatherRunnerRunSpy = sinon.spy(GatherRunner, 'run');
+    const runAuditSpy = sinon.spy(Runner, '_runAudit');
+
+    it('-G gathers, quits, and doesn\'t run audits', () => {
+      const url = 'https://example.com';
+      const config = new Config({
+        passes: [{
+          gatherers: ['viewport-dimensions'],
+        }],
+        audits: [
+          'content-width'
+        ],
+      });
+      const opts = {url, config, driverMock, flags: {onlyGather: true}};
+      return Runner.run(null, opts).then(_ => {
+        assert.equal(saveArtifactsSpy.called, true);
+        const saveArtifactArg = saveArtifactsSpy.getCall(0).args[0];
+        assert.ok(saveArtifactArg.ViewportDimensions);
+        assert.ok(saveArtifactArg.devtoolsLogs.defaultPass.length > 100);
+
+        assert.equal(runAuditSpy.called, false);
+      });
+    });
+
+    // uses the files on disk from the -G test. ;)
+    it('-A audits from saved artifacts and doesn\'t gather', () => {
+      const url = 'https://example.com';
+      const config = new Config({
+        passes: [{
+          gatherers: ['viewport-dimensions'],
+        }],
+        audits: [
+          'content-width'
+        ],
+      });
+      const opts = {url, config, driverMock, flags: {onlyAudit: true}};
+      return Runner.run(null, opts).then(_ => {
+        assert.equal(gatherRunnerRunSpy.called, false);
+        assert.equal(saveArtifactsSpy.called, false);
+        assert.equal(runAuditSpy.called, true);
+      });
+    });
+  });
+
   it('expands gatherers', () => {
     const url = 'https://example.com';
     const config = new Config({
@@ -31,6 +81,7 @@ describe('Runner', () => {
       assert.ok(typeof config.passes[0].gatherers[0] === 'object');
     });
   });
+
 
   it('rejects when given neither passes nor artifacts', () => {
     const url = 'https://example.com';

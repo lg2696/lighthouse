@@ -51,8 +51,10 @@ class Runner {
     // Make a run, which can be .then()'d with whatever needs to run (based on the config).
     let run = Promise.resolve();
 
-    const shouldGatherAndQuit = opts.flags.onlyGather;
-    const shouldLoadArtifactsFromDisk = opts.flags.onlyAudit;
+    // User can run -G solo, -A solo, or -GA together
+    const shouldSaveArtifactsToDisk = opts.flags.onlyGather;
+    const shouldGatherAndQuit = opts.flags.onlyGather && !opts.flags.onlyAudit;
+    const shouldLoadArtifactsFromDisk = opts.flags.onlyAudit && !opts.flags.onlyGather;
 
     if (shouldLoadArtifactsFromDisk) {
       config.removePasses();
@@ -61,7 +63,7 @@ class Runner {
       });
     }
 
-    const shouldGather = config.passes && !config.artifacts && !shouldLoadArtifactsFromDisk;
+    const shouldGatherFromBrowser = config.passes && !config.artifacts && !opts.flags.onlyAudit;
 
     // Entering: Gather phase
     if (!config.passes && !config.artifacts && !shouldLoadArtifactsFromDisk) {
@@ -70,15 +72,15 @@ class Runner {
     }
 
     // If we're gathering, let's go collect artifacts from the browser
-    if (shouldGather) {
+    if (shouldGatherFromBrowser) {
       opts.driver = opts.driverMock || new Driver(connection);
       // Kick off the gather run
       run = run.then(_ => GatherRunner.run(config.passes, opts));
-      // Potentially quit now if we're only saving collected artifacts
-      if (shouldGatherAndQuit) {
+      // Potentially quit now if we ran -G (but not -GA)
+      if (shouldSaveArtifactsToDisk) {
         run = run.then(artifacts => assetSaver.saveArtifacts(artifacts, basePath).then(_ => {}));
-        return run;
       }
+      if (shouldGatherAndQuit) return run;
     }
 
     // Entering: Audit phase
