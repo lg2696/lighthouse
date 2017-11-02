@@ -51,19 +51,17 @@ class Runner {
     // Make a run, which can be .then()'d with whatever needs to run (based on the config).
     let run = Promise.resolve();
 
-
     const shouldGatherAndQuit = opts.flags.onlyGather;
-    const shouldOnlyAudit = opts.flags.onlyAudit;
+    const shouldLoadArtifactsFromFile = opts.flags.onlyAudit;
 
-    if (shouldOnlyAudit) {
+    if (shouldLoadArtifactsFromFile) {
       config.removePasses();
       config._artifacts = JSON.parse(
         fs.readFileSync(path.join(process.cwd(), `${partialRunFilename}.artifacts.log`), 'utf8')
       );
     }
 
-    const shouldGather = config.passes && !config.artifacts && !shouldOnlyAudit;
-
+    const shouldGather = config.passes && !config.artifacts && !shouldLoadArtifactsFromFile;
 
     // Entering: Gather phase
     if (!config.passes && !config.artifacts) {
@@ -92,13 +90,12 @@ class Runner {
       return Promise.reject(err);
     }
 
-    run = run.then(_ => {
-      log.log('status', 'Analyzing and running audits...');
-      return Object.assign(Runner.instantiateComputedArtifacts(), config.artifacts);
-    });
-
-    // Run each audit sequentially
+    // Run the audits
     run = run.then(artifacts => {
+      log.log('status', 'Analyzing and running audits...');
+      artifacts = Object.assign(Runner.instantiateComputedArtifacts(), artifacts || config._artifacts);
+
+      // Run each audit sequentially
       const promises = config.audits.map(audit => Runner._runAudit(audit, artifacts));
       return Promise.all(promises).then(auditResults => ({artifacts, auditResults}));
     });
@@ -139,6 +136,7 @@ class Runner {
 
     return run;
   }
+
 
   /**
    * Checks that the audit's required artifacts exist and runs the audit if so.
