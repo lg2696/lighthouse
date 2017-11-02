@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const URL = require('./lib/url-shim');
 
-const partialRunFilename = 'latest';
+const basePath = path.join(process.cwd(), 'latest-run');
 
 class Runner {
   static run(connection, opts) {
@@ -52,19 +52,19 @@ class Runner {
     let run = Promise.resolve();
 
     const shouldGatherAndQuit = opts.flags.onlyGather;
-    const shouldLoadArtifactsFromFile = opts.flags.onlyAudit;
+    const shouldLoadArtifactsFromDisk = opts.flags.onlyAudit;
 
-    if (shouldLoadArtifactsFromFile) {
+    if (shouldLoadArtifactsFromDisk) {
       config.removePasses();
-      config._artifacts = JSON.parse(
-        fs.readFileSync(path.join(process.cwd(), `${partialRunFilename}.artifacts.log`), 'utf8')
-      );
+      run = run.then(_ => {
+        return assetSaver.loadArtifacts(basePath).then(artifacts => config._artifacts = artifacts);
+      });
     }
 
-    const shouldGather = config.passes && !config.artifacts && !shouldLoadArtifactsFromFile;
+    const shouldGather = config.passes && !config.artifacts && !shouldLoadArtifactsFromDisk;
 
     // Entering: Gather phase
-    if (!config.passes && !config.artifacts) {
+    if (!config.passes && !config.artifacts && !shouldLoadArtifactsFromDisk) {
       const err = new Error('You must require either gather passes or provide saved artifacts.');
       return Promise.reject(err);
     }
@@ -76,9 +76,7 @@ class Runner {
       run = run.then(_ => GatherRunner.run(config.passes, opts));
       // Potentially quit now if we're only saving collected artifacts
       if (shouldGatherAndQuit) {
-        run = run.then(artifacts =>
-          assetSaver.saveArtifacts(artifacts, path.join(process.cwd(), partialRunFilename)) || {}
-        );
+        run = run.then(artifacts => assetSaver.saveArtifacts(artifacts, basePath).then(_ => {}));
         return run;
       }
     }
@@ -93,7 +91,7 @@ class Runner {
     // Run the audits
     run = run.then(artifacts => {
       log.log('status', 'Analyzing and running audits...');
-      artifacts = Object.assign(Runner.instantiateComputedArtifacts(), artifacts || config._artifacts);
+      artifacts = Object.assign(Runner.instantiateComputedArtifacts(), artifacts || config.artifacts);
 
       // Run each audit sequentially
       const promises = config.audits.map(audit => Runner._runAudit(audit, artifacts));
