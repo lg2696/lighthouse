@@ -8,9 +8,9 @@
 /* eslint-disable no-console */
 
 // TODO(bckenny):
+// - move package.json requirements up a dir
+// - merge tests (running and coverage?) into lighthouse-core tests?
 // update all tests for new world
-// move package.json requirements up a dir
-// merge tests (running and coverage?) into lighthouse-core tests?
 // get new type checking working
 // strict tsc checks
 
