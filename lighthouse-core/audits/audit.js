@@ -175,12 +175,6 @@ module.exports = Audit;
 
 /**
  * @typedef {Array<Audit.Heading>} Audit.Headings
- * @property {number} width
- * @property {number} height
- * @property {number=} deviceScaleFactor
- * @property {boolean=} isMobile
- * @property {boolean=} isLandscape
- * @property {boolean=} hasTouch
  */
 
 /**
