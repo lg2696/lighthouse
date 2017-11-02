@@ -12,6 +12,10 @@ const pkg = require('../package.json');
 const Driver = require('../lighthouse-core/gather/driver.js');
 const printer = require('./printer');
 
+/**
+ * @param {string=} manualArgv
+ * @return {!Object<string, *>}
+ */
 function getFlags(manualArgv) {
   const y = manualArgv ? yargs(manualArgv) : yargs;
   return y.help('help')
@@ -123,4 +127,6 @@ Example: --output-path=./lighthouse-results.html`,
     .argv;
 }
 
-module.exports = getFlags;
+module.exports = {
+  getFlags,
+};

@@ -12,6 +12,7 @@ const log = require('lighthouse-logger');
 
 const MAXIMUM_WAIT_TIME = 20 * 1000;
 
+// eslint-disable-next-line max-len
 const MESSAGE = `${log.reset}We're constantly trying to improve Lighthouse and its reliability.\n  ` +
   `May we anonymously report runtime exceptions to improve the tool over time?\n  ` +
   `${log.reset}Learn more: https://github.com/GoogleChrome/lighthouse/blob/master/docs/error-reporting.md`;
@@ -63,4 +64,6 @@ async function askPermission() {
   return isErrorReportingEnabled;
 }
 
-module.exports = askPermission;
+module.exports = {
+  askPermission,
+};
