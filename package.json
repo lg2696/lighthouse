@@ -14,7 +14,7 @@
     "install-all": "npm-run-posix-or-windows install-all:task",
     "install-all:task": "yarn & yarn install-cli & yarn install-extension & yarn install-viewer & wait",
     "install-all:task:windows": "yarn && yarn install-cli && yarn install-extension && yarn install-viewer",
-    "install-cli": "cd ./lighthouse-cli && yarn install && yarn build",
+    "install-cli": "cd ./lighthouse-cli && yarn install",
     "install-extension": "cd ./lighthouse-extension && yarn install",
     "install-viewer": "cd ./lighthouse-viewer && yarn install",
     "build-all": "npm-run-posix-or-windows build-all:task",
