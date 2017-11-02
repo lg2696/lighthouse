@@ -12,6 +12,7 @@
 // move package.json requirements up a dir
 // merge tests (running and coverage?) into lighthouse-core tests?
 // get new type checking working
+// strict tsc checks
 
 const path = require('path');
 
@@ -41,7 +42,7 @@ const _PROTOCOL_TIMEOUT_EXIT_CODE = 67;
 /**
  * exported for testing
  * @param {string} flags
- * @return {!Object<string, string>}
+ * @return {!Array<string>}
  */
 function parseChromeFlags(flags = '') {
   const parsed = yargsParser(

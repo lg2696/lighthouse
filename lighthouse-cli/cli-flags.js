@@ -8,6 +8,7 @@
 /* eslint-disable max-len */
 
 const yargs = require('yargs');
+// @ts-ignore
 const pkg = require('../package.json');
 const Driver = require('../lighthouse-core/gather/driver.js');
 const printer = require('./printer');

@@ -1,19 +1,15 @@
 {
-    "compilerOptions": {
-        "module": "commonjs",
-        "target": "ES2017",
-        "noImplicitAny": true,
-        "inlineSourceMap": true,
-        "noEmitOnError": false,
-        "strictNullChecks": true,
-        "noImplicitReturns": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true
-    },
-    "exclude": [
-        "node_modules"
-    ],
-    "include": [
-        "*.ts"
-    ]
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "commonjs",
+    "target": "ES2017",
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": [
+    "*.js"
+  ],
+  "exclude": [
+    "**/lighthouse-core/*"
+  ]
 }
