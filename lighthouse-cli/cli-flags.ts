@@ -53,13 +53,9 @@ export function getFlags(manualArgv?: string) {
       .group(
           [
 
-            'save-assets', 'save-artifacts',
-                'only-gather',
-    'only-audit',
-    'only-report',
-            'list-all-audits', 'list-trace-categories',
-            'additional-trace-categories', 'config-path', 'chrome-flags', 'perf', 'port',
-            'hostname', 'max-wait-for-load'
+            'save-assets', 'save-artifacts', 'only-gather', 'only-audit', 'only-report',
+            'list-all-audits', 'list-trace-categories', 'additional-trace-categories',
+            'config-path', 'chrome-flags', 'perf', 'port', 'hostname', 'max-wait-for-load'
 
           ],
           'Configuration:')
