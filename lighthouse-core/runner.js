@@ -51,65 +51,56 @@ class Runner {
     // Make a run, which can be .then()'d with whatever needs to run (based on the config).
     let run = Promise.resolve();
 
-    if (opts.flags.onlyAudit) {
+
+    const shouldGatherAndQuit = opts.flags.onlyGather;
+    const shouldOnlyAudit = opts.flags.onlyAudit;
+
+    if (shouldOnlyAudit) {
       config.removePasses();
-      config.artifacts = JSON.parse(
+      config._artifacts = JSON.parse(
         fs.readFileSync(path.join(process.cwd(), `${partialRunFilename}.artifacts.log`), 'utf8')
       );
     }
 
-    // Entering: Gather phase
-    const willGatherArtifacts = config.passes;
-    const willProcessSavedArtifacts = config.artifacts;
+    const shouldGather = config.passes && !config.artifacts && !shouldOnlyAudit;
 
-    if (!willGatherArtifacts && !willProcessSavedArtifacts) {
-      const err = Error('The config must provide gather passes or saved artifacts.');
+
+    // Entering: Gather phase
+    if (!config.passes && !config.artifacts) {
+      const err = new Error('You must require either gather passes or provide saved artifacts.');
       return Promise.reject(err);
     }
 
     // If we're gathering, let's go collect artifacts from the browser
-    if (willGatherArtifacts) {
+    if (shouldGather) {
       opts.driver = opts.driverMock || new Driver(connection);
       // Kick off the gather run
       run = run.then(_ => GatherRunner.run(config.passes, opts));
       // Potentially quit now if we're only saving collected artifacts
-      if (opts.flags.onlyGather) {
+      if (shouldGatherAndQuit) {
         run = run.then(artifacts =>
-          assetSaver.saveArtifacts(artifacts, path.join(process.cwd(), partialRunFilename))
+          assetSaver.saveArtifacts(artifacts, path.join(process.cwd(), partialRunFilename)) || {}
         );
         return run;
       }
-    // In this case, skip connecting to a browser, we'll just process the offline artifacts
-    } else if (willProcessSavedArtifacts) {
-      run = run.then(_ => {
-        return Object.assign(Runner.instantiateComputedArtifacts(), config.artifacts);
-      });
     }
 
     // Entering: Audit phase
-    run = run.then(artifacts => {
-      log.log('status', 'Analyzing and running audits...');
-      return artifacts;
-    });
-
     if (!config.audits) {
-      const err = Error(
+      const err = new Error(
           'The run cannot continue as the config has defined no audits to evaluate.');
       return Promise.reject(err);
     }
 
-    // Run each audit sequentially, the auditResults array has all our fine work
-    const auditResults = [];
-    for (const audit of config.audits) {
-      run = run.then(artifacts => {
-        return Runner._runAudit(audit, artifacts)
-          .then(ret => auditResults.push(ret))
-          .then(_ => artifacts);
-      });
-    }
+    run = run.then(_ => {
+      log.log('status', 'Analyzing and running audits...');
+      return Object.assign(Runner.instantiateComputedArtifacts(), config.artifacts);
+    });
 
+    // Run each audit sequentially
     run = run.then(artifacts => {
-      return {artifacts, auditResults};
+      const promises = config.audits.map(audit => Runner._runAudit(audit, artifacts));
+      return Promise.all(promises).then(auditResults => ({artifacts, auditResults}));
     });
 
     // Entering: Conclusion of the lighthouse result object
