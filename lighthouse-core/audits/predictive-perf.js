@@ -27,8 +27,9 @@ class PredictivePerf extends Audit {
     return {
       name: 'predictive-perf',
       description: 'Predicted Performance (beta)',
-      helpText: 'Predicted performance evaluates how your site will perform under ' +
-          'a 3G connection on a mobile device.',
+      helpText:
+        'Predicted performance evaluates how your site will perform under ' +
+        'a 3G connection on a mobile device.',
       scoringMode: Audit.SCORING_MODES.NUMERIC,
       requiredArtifacts: ['traces', 'devtoolsLogs'],
     };
@@ -36,13 +37,39 @@ class PredictivePerf extends Audit {
 
   /**
    * @param {!Node} dependencyGraph
+   * @param {function()=} condition
+   * @return {!Set<string>}
+   */
+  static getScriptUrls(dependencyGraph, condition) {
+    const scriptUrls = new Set();
+
+    dependencyGraph.traverse(node => {
+      if (node.type === Node.TYPES.CPU) return;
+      if (node.record._resourceType !== WebInspector.resourceTypes.Script) return;
+      if (condition && !condition(node)) return;
+      scriptUrls.add(node.record.url);
+    });
+
+    return scriptUrls;
+  }
+
+  /**
+   * @param {!Node} dependencyGraph
    * @param {!TraceOfTabArtifact} traceOfTab
    * @return {!Node}
    */
-  static getOptimisticFMPGraph(dependencyGraph, traceOfTab) {
-    const fmp = traceOfTab.timestamps.firstMeaningfulPaint;
+  static getOptimisticFCPGraph(dependencyGraph, traceOfTab) {
+    const fcp = traceOfTab.timestamps.firstContentfulPaint;
+    const blockingScriptUrls = PredictivePerf.getScriptUrls(dependencyGraph, node => {
+      return (
+        node.endTime <= fcp && node.hasRenderBlockingPriority() && node.initiatorType !== 'script'
+      );
+    });
+
     return dependencyGraph.cloneWithRelationships(node => {
-      if (node.endTime > fmp || node.type === Node.TYPES.CPU) return false;
+      if (node.endTime > fcp) return false;
+      // Include EvaluateScript tasks for blocking scripts
+      if (node.type === Node.TYPES.CPU) return node.isEvaluateScriptFor(blockingScriptUrls);
       // Include non-script-initiated network requests with a render-blocking priority
       return node.hasRenderBlockingPriority() && node.initiatorType !== 'script';
     });
@@ -53,12 +80,16 @@ class PredictivePerf extends Audit {
    * @param {!TraceOfTabArtifact} traceOfTab
    * @return {!Node}
    */
-  static getPessimisticFMPGraph(dependencyGraph, traceOfTab) {
-    const fmp = traceOfTab.timestamps.firstMeaningfulPaint;
+  static getPessimisticFCPGraph(dependencyGraph, traceOfTab) {
+    const fcp = traceOfTab.timestamps.firstContentfulPaint;
+    const blockingScriptUrls = PredictivePerf.getScriptUrls(dependencyGraph, node => {
+      return node.endTime <= fcp && node.hasRenderBlockingPriority();
+    });
+
     return dependencyGraph.cloneWithRelationships(node => {
-      if (node.endTime > fmp) return false;
-      // Include CPU tasks that performed a layout
-      if (node.type === Node.TYPES.CPU) return node.didPerformLayout();
+      if (node.endTime > fcp) return false;
+      // Include EvaluateScript tasks for blocking scripts
+      if (node.type === Node.TYPES.CPU) return node.isEvaluateScriptFor(blockingScriptUrls);
       // Include all network requests that had render-blocking priority (even script-initiated)
       return node.hasRenderBlockingPriority();
     });
@@ -116,8 +147,8 @@ class PredictivePerf extends Audit {
       artifacts.requestTraceOfTab(trace),
     ]).then(([graph, traceOfTab]) => {
       const graphs = {
-        optimisticFMP: PredictivePerf.getOptimisticFMPGraph(graph, traceOfTab),
-        pessimisticFMP: PredictivePerf.getPessimisticFMPGraph(graph, traceOfTab),
+        optimisticFCP: PredictivePerf.getOptimisticFCPGraph(graph, traceOfTab),
+        pessimisticFCP: PredictivePerf.getPessimisticFCPGraph(graph, traceOfTab),
         optimisticTTCI: PredictivePerf.getOptimisticTTCIGraph(graph, traceOfTab),
         pessimisticTTCI: PredictivePerf.getPessimisticTTCIGraph(graph, traceOfTab),
       };
@@ -129,15 +160,15 @@ class PredictivePerf extends Audit {
         const lastLongTaskEnd = PredictivePerf.getLastLongTaskEndTime(estimate.nodeTiming);
 
         switch (key) {
-          case 'optimisticFMP':
-          case 'pessimisticFMP':
+          case 'optimisticFCP':
+          case 'pessimisticFCP':
             values[key] = estimate.timeInMs;
             break;
           case 'optimisticTTCI':
-            values[key] = Math.max(values.optimisticFMP, lastLongTaskEnd);
+            values[key] = Math.max(values.optimisticFCP, lastLongTaskEnd);
             break;
           case 'pessimisticTTCI':
-            values[key] = Math.max(values.pessimisticFMP, lastLongTaskEnd);
+            values[key] = Math.max(values.pessimisticFCP, lastLongTaskEnd);
             break;
         }
 

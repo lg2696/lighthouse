@@ -26,12 +26,12 @@ describe('Performance: predictive performance audit', () => {
 
     return PredictivePerf.audit(artifacts).then(output => {
       assert.equal(output.score, 99);
-      assert.equal(Math.round(output.rawValue), 1696);
-      assert.equal(output.displayValue, '1,700\xa0ms');
+      assert.equal(Math.round(output.rawValue), 1513);
+      assert.equal(output.displayValue, '1,510\xa0ms');
 
       const valueOf = name => Math.round(output.extendedInfo.value[name]);
-      assert.equal(valueOf('optimisticFMP'), 754);
-      assert.equal(valueOf('pessimisticFMP'), 1191);
+      assert.equal(valueOf('optimisticFCP'), 607);
+      assert.equal(valueOf('pessimisticFCP'), 607);
       assert.equal(valueOf('optimisticTTCI'), 2438);
       assert.equal(valueOf('pessimisticTTCI'), 2399);
     });
